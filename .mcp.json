@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "comfyui-helper": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/home/yarnb/comfyui-helper",
+        "run",
+        "python",
+        "-m",
+        "comfyui_helper"
+      ],
+      "env": {}
+    }
+  }
+}

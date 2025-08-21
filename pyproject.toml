@@ -1,7 +1,15 @@
 [project]
 name = "comfyui-helper"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server for sprite sheet composition and game development tools"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "mcp>=1.13.0",
+    "pillow>=11.3.0",
+    "pydantic>=2.11.7",
+]
+
+[tool.setuptools]
+packages = ["comfyui_helper"]
+package-dir = {"" = "src"}
