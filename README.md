@@ -54,9 +54,9 @@ uv pip install -e .
 
 3. 重启 Claude Desktop 即可使用
 
-## 可用工具
+## 可用功能
 
-### 🎮 精灵图拼接工具
+### 🎮 工具：精灵图拼接
 
 将单个精灵帧图片拼接成游戏引擎可用的精灵表格式。
 
@@ -68,7 +68,15 @@ compose_sprite_sheet(
 )
 ```
 
-详细文档请参考：[精灵图工具文档](src/comfyui_helper/README.md)
+### 📚 资源：使用指南
+
+MCP 服务器提供以下资源，可在 Claude 中直接查看：
+
+- **sprite://project-structure** - 精灵图项目的标准目录结构说明
+- **sprite://config-template** - config.json 配置文件模板和详细说明
+- **sprite://example-project** - 创建示例项目的完整步骤
+
+在 Claude 中输入资源 URI 即可查看详细内容。
 
 ## 项目结构
 
