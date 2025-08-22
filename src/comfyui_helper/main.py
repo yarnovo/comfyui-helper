@@ -50,18 +50,25 @@ def compose_sprite_sheet(project_dir: str, generate_preview: bool = True) -> str
         # 创建输出目录
         output_dir.mkdir(exist_ok=True)
         
-        # 加载配置
-        composer = SpriteSheetComposer()
-        if config_file.exists():
-            config = composer.load_config_file(str(config_file))
+        # 加载配置 - 配置文件必须存在
+        if not config_file.exists():
+            return f"❌ 配置文件不存在: {config_file}\n请创建 config.json 文件，包含必要的配置字段"
+        
+        try:
+            config = SpriteSheetComposer.load_config_file(str(config_file))
             composer = SpriteSheetComposer(config)
             logger.info(f"已加载配置文件: {config_file}")
-        else:
-            logger.info("使用默认配置")
+        except FileNotFoundError as e:
+            return f"❌ {str(e)}"
+        except json.JSONDecodeError as e:
+            return f"❌ 配置文件格式错误: {str(e)}"
+        except ValueError as e:
+            return f"❌ 配置文件验证失败: {str(e)}"
+        except Exception as e:
+            return f"❌ 加载配置文件失败: {str(e)}"
         
-        # 生成输出文件名
-        project_name = project_path.name
-        output_path = output_dir / f"{project_name}_spritesheet.png"
+        # 使用固定的输出文件名
+        output_path = output_dir / "spritesheet.png"
         
         # 创建精灵表
         result = composer.create_sprite_sheet(
@@ -73,7 +80,7 @@ def compose_sprite_sheet(project_dir: str, generate_preview: bool = True) -> str
         if result["success"]:
             response_text = f"""✅ {result['message']}
 
-项目: {project_name}
+项目: {project_path.name}
 输入目录: {input_frames_dir}
 
 输出文件:
@@ -107,16 +114,16 @@ def get_project_structure() -> str:
 ## 必需的目录结构
 ```
 your_project/              # 项目根目录
-├── config.json           # 配置文件（可选，不存在则使用默认配置）
+├── config.json           # 配置文件（必需）
 ├── input_frames/         # 输入精灵帧目录（必需）
 │   ├── idle_down_001.png
 │   ├── idle_down_002.png
 │   ├── walk_left_01.png
 │   └── ...
 └── output/              # 输出目录（自动创建）
-    ├── xxx_spritesheet.png      # 生成的精灵表
-    ├── xxx_spritesheet.json     # Godot 配置文件
-    └── xxx_spritesheet.preview.png # 预览图（可选）
+    ├── spritesheet.png      # 生成的精灵表
+    ├── spritesheet.json     # Godot 配置文件
+    └── spritesheet.preview.png # 预览图（可选）
 ```
 
 ## 文件命名规范
@@ -216,8 +223,8 @@ input_frames/
 └── ...
 ```
 
-## 步骤 3：（可选）创建配置文件
-如果需要自定义配置，创建 `config.json`：
+## 步骤 3：创建配置文件（必需）
+创建 `config.json` 文件：
 ```json
 {
   "frame_width": 64,
@@ -239,9 +246,9 @@ compose_sprite_sheet(
 
 ## 输出结果
 工具会在 `output/` 目录生成：
-- `my_character_spritesheet.png` - 精灵表图片
-- `my_character_spritesheet.json` - Godot 配置文件
-- `my_character_spritesheet.preview.png` - 带网格的预览图（如果启用）
+- `spritesheet.png` - 精灵表图片
+- `spritesheet.json` - Godot 配置文件
+- `spritesheet.preview.png` - 带网格的预览图（如果启用）
 
 ## 提示
 - 确保所有帧图片尺寸一致

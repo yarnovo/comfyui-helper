@@ -5,7 +5,7 @@ import os
 import json
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,68 +13,68 @@ logger = logging.getLogger(__name__)
 class SpriteSheetComposer:
     """精灵表拼接器"""
     
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: Dict):
         """
         初始化精灵表拼接器
         
         Args:
-            config: 配置字典，如果为None则使用默认配置
+            config: 配置字典，必须提供
+        
+        Raises:
+            ValueError: 如果配置为空或缺少必要字段
         """
-        if config is None:
-            config = self.get_default_config()
+        if not config:
+            raise ValueError("必须提供配置字典")
+        
+        # 验证必要的配置字段
+        required_fields = ['frame_width', 'frame_height', 'cols', 'rows', 'animations']
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValueError(f"配置缺少必要字段: {', '.join(missing_fields)}")
         
         self.config = config
-        self.frame_width = self.config.get('frame_width', 64)
-        self.frame_height = self.config.get('frame_height', 96)
-        self.cols = self.config.get('cols', 8)
-        self.rows = self.config.get('rows', 16)
-        self.animations = self.config.get('animations', {})
-        self.background_color = tuple(self.config.get('background_color', [0, 0, 0, 0]))
+        self.frame_width = config['frame_width']
+        self.frame_height = config['frame_height']
+        self.cols = config['cols']
+        self.rows = config['rows']
+        self.animations = config['animations']
+        self.background_color = tuple(config.get('background_color', [0, 0, 0, 0]))
+    
     
     @staticmethod
-    def get_default_config() -> Dict:
-        """获取默认配置"""
-        return {
-            "frame_width": 64,
-            "frame_height": 96,
-            "cols": 8,
-            "rows": 16,
-            "background_color": [0, 0, 0, 0],
-            "animations": {
-                "idle_down": {"row": 0, "frames": 8},
-                "idle_left": {"row": 1, "frames": 8},
-                "idle_right": {"row": 2, "frames": 8},
-                "idle_up": {"row": 3, "frames": 8},
-                "walk_down": {"row": 4, "frames": 8},
-                "walk_left": {"row": 5, "frames": 8},
-                "walk_right": {"row": 6, "frames": 8},
-                "walk_up": {"row": 7, "frames": 8},
-                "run_down": {"row": 8, "frames": 6},
-                "run_left": {"row": 9, "frames": 6},
-                "run_right": {"row": 10, "frames": 6},
-                "run_up": {"row": 11, "frames": 6},
-                "attack_down": {"row": 12, "frames": 4},
-                "attack_left": {"row": 13, "frames": 4},
-                "attack_right": {"row": 14, "frames": 4},
-                "attack_up": {"row": 15, "frames": 4}
-            }
-        }
-    
-    def load_config_file(self, config_path: str) -> Dict:
-        """从文件加载配置"""
-        default_config = self.get_default_config()
+    def load_config_file(config_path: str) -> Dict:
+        """从文件加载配置
         
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    user_config = json.load(f)
-                    default_config.update(user_config)
-                    logger.info(f"已加载配置文件: {config_path}")
-            except Exception as e:
-                logger.error(f"加载配置文件失败: {e}")
-                logger.info("使用默认配置")
+        Args:
+            config_path: 配置文件路径
+            
+        Returns:
+            Dict: 配置字典
+            
+        Raises:
+            FileNotFoundError: 如果配置文件不存在
+            json.JSONDecodeError: 如果配置文件格式错误
+            ValueError: 如果配置缺少必要字段
+        """
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"配置文件不存在: {config_path}")
         
-        return default_config
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                logger.info(f"已加载配置文件: {config_path}")
+                
+                # 验证必要的配置字段
+                required_fields = ['frame_width', 'frame_height', 'cols', 'rows', 'animations']
+                missing_fields = [field for field in required_fields if field not in config]
+                if missing_fields:
+                    raise ValueError(f"配置文件缺少必要字段: {', '.join(missing_fields)}")
+                
+                return config
+        except json.JSONDecodeError as e:
+            raise json.JSONDecodeError(f"配置文件格式错误: {config_path}", e.doc, e.pos)
+        except Exception as e:
+            raise Exception(f"加载配置文件失败: {e}")
     
     def find_frames(self, input_dir: str) -> Dict[str, List[str]]:
         """

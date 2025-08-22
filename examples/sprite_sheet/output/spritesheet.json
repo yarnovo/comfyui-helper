@@ -4,7 +4,7 @@
   "fps": 12.0,
   "billboard_mode": true,
   "pixel_perfect": true,
-  "texture_path": "/home/yarnb/comfyui-helper/examples/character_sprite/output/character_sprite_spritesheet.png",
+  "texture_path": "/home/yarnb/comfyui-helper/examples/sprite_sheet/output/spritesheet.png",
   "animations": {
     "idle_down": {
       "row": 0,
