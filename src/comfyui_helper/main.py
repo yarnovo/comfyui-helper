@@ -179,21 +179,35 @@ def get_config_template() -> str:
 
 ## 配置说明
 
+### 必需字段
 - **frame_width**: 单个精灵帧的宽度（像素）
 - **frame_height**: 单个精灵帧的高度（像素）
 - **cols**: 精灵表的列数
 - **rows**: 精灵表的行数
-- **background_color**: 背景颜色 [R, G, B, A]，范围 0-255
-- **animations**: 动画配置
-  - **row**: 该动画在精灵表中的行号（从0开始）
-  - **frames**: 该动画的帧数
+- **animations**: 动画配置对象（必需，决定输出布局）
+
+### 可选字段
+- **background_color**: 背景颜色 [R, G, B, A]，范围 0-255，默认 [0, 0, 0, 0]（透明）
+
+### animations 配置详解
+`animations` 是核心配置，直接决定输出精灵表的结构：
+- 每个键是动画名称（如 `idle_down`、`walk_left`）
+- `row`: 该动画在精灵表中的行号（从0开始）
+- `frames`: 该动画占用的帧数（列数）
+
+**工作原理**：
+1. 程序扫描 input_frames 目录中的文件
+2. 根据文件名前缀（如 `idle_down_001.png` → `idle_down`）匹配动画配置
+3. 将匹配到的帧按序号排列在指定行
+4. 未在 animations 中定义的动画文件将被忽略
 
 ## 注意事项
 
-1. 每个动画占据一行
-2. 如果实际帧数少于配置的 frames，会留空
-3. 如果实际帧数多于配置的 frames，多余的会被忽略
-4. 可以根据需要调整每个动画的帧数
+1. animations 配置是必需的，它定义了输出精灵表的完整布局
+2. 只有在 animations 中定义的动画才会被处理
+3. 如果实际帧数少于配置的 frames，会在该行留出空白格子
+4. 如果实际帧数多于配置的 frames，多余的帧会被忽略
+5. 输出图片尺寸 = (cols × frame_width) × (rows × frame_height)
 """
 
 
