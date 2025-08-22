@@ -201,7 +201,7 @@ class SpriteSheetComposer:
                 result["preview_path"] = str(preview_path)
             
             config_path = output_path.with_suffix('.json')
-            self.generate_godot_config(str(config_path), str(output_path))
+            self.generate_sprite_config(str(config_path), str(output_path))
             result["config_path"] = str(config_path)
             
             result.update({
@@ -244,24 +244,21 @@ class SpriteSheetComposer:
         
         preview.save(preview_path, 'PNG')
     
-    def generate_godot_config(self, config_path: str, sprite_path: str):
-        """生成 Godot 项目可用的配置文件"""
-        godot_config = {
+    def generate_sprite_config(self, config_path: str, sprite_path: str):
+        """生成精灵表配置文件，描述生成的图片信息"""
+        sprite_config = {
             "frame_width": self.frame_width,
             "frame_height": self.frame_height,
-            "fps": 12.0,
-            "billboard_mode": True,
-            "pixel_perfect": True,
-            "texture_path": sprite_path.replace('\\', '/'),
+            "cols": self.cols,
+            "rows": self.rows,
             "animations": {}
         }
         
         for anim_name, anim_config in self.animations.items():
-            godot_config["animations"][anim_name] = {
+            sprite_config["animations"][anim_name] = {
                 "row": anim_config["row"],
-                "frames": anim_config["frames"],
-                "start_frame": 0
+                "frames": anim_config["frames"]
             }
         
         with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(godot_config, f, indent=2, ensure_ascii=False)
+            json.dump(sprite_config, f, indent=2, ensure_ascii=False)

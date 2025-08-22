@@ -12,6 +12,7 @@ from mcp.types import Resource, TextContent
 
 from .sprite_composer import SpriteSheetComposer
 from .video_frame_extractor import VideoFrameExtractor
+from .image_scaler import ImageScaler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -122,7 +123,7 @@ your_project/              # 项目根目录
 │   └── ...
 └── output/              # 输出目录（自动创建）
     ├── spritesheet.png      # 生成的精灵表
-    ├── spritesheet.json     # Godot 配置文件
+    ├── spritesheet.json     # 精灵表描述文件
     └── spritesheet.preview.png # 预览图（可选）
 ```
 
@@ -261,7 +262,7 @@ compose_sprite_sheet(
 ## 输出结果
 工具会在 `output/` 目录生成：
 - `spritesheet.png` - 精灵表图片
-- `spritesheet.json` - Godot 配置文件
+- `spritesheet.json` - 精灵表描述文件（包含帧位置、尺寸等信息）
 - `spritesheet.preview.png` - 带网格的预览图（如果启用）
 
 ## 提示
@@ -451,6 +452,243 @@ extract_video_frames(
 2. 需要系统安装 ffmpeg
 3. 输出文件命名格式：{prefix}_{序号}.{format}
 4. PNG 格式无损，JPG 格式有损但文件更小
+"""
+
+
+@mcp.tool()
+def scale_image(
+    input_path: str,
+    output_path: str = None,
+    scale_factor: float = None,
+    target_width: int = None,
+    target_height: int = None,
+    keep_aspect_ratio: bool = True,
+    resampling: str = 'lanczos',
+    quality: int = 95
+) -> str:
+    """
+    缩放单张图片
+    
+    Args:
+        input_path: 输入图片路径
+        output_path: 输出图片路径（可选，默认在同目录生成 {原名}_{宽}x{高}.{扩展名}）
+        scale_factor: 缩放倍数（如0.5=缩小一半，2=放大一倍）
+        target_width: 目标宽度（像素）
+        target_height: 目标高度（像素）
+        keep_aspect_ratio: 是否保持宽高比
+        resampling: 重采样算法（nearest适合像素艺术/bilinear/bicubic/lanczos适合照片）
+        quality: JPEG质量（1-100，仅对JPEG有效）
+        
+    Returns:
+        处理结果信息
+    """
+    try:
+        scaler = ImageScaler()
+        
+        # 验证参数
+        if not any([scale_factor, target_width, target_height]):
+            return "❌ 错误：必须指定 scale_factor、target_width 或 target_height 至少一个参数"
+        
+        result = scaler.scale_image(
+            input_path=input_path,
+            output_path=output_path,
+            scale_factor=scale_factor,
+            target_width=target_width,
+            target_height=target_height,
+            keep_aspect_ratio=keep_aspect_ratio,
+            resampling=resampling,
+            quality=quality
+        )
+        
+        if result["success"]:
+            response_text = f"""✅ {result['message']}
+
+图片信息:
+- 原始尺寸: {result['original_size'][0]}x{result['original_size'][1]}
+- 新尺寸: {result['new_size'][0]}x{result['new_size'][1]}
+- 缩放比例: {result['scale_factor']:.2f}x
+- 输出文件: {result['output_path']}"""
+        else:
+            response_text = f"❌ {result['message']}"
+        
+        return response_text
+        
+    except Exception as e:
+        return f"❌ 错误: {str(e)}"
+
+
+@mcp.tool()
+def batch_scale_images(
+    input_dir: str,
+    output_dir: str = None,
+    scale_factor: float = None,
+    target_width: int = None,
+    target_height: int = None,
+    keep_aspect_ratio: bool = True,
+    resampling: str = 'lanczos',
+    quality: int = 95,
+    pattern: str = None
+) -> str:
+    """
+    批量缩放目录中的图片
+    
+    Args:
+        input_dir: 输入目录路径（处理该目录下的所有图片）
+        output_dir: 输出目录路径（可选，默认在输入目录同级创建 {输入目录名}_scaled 文件夹）
+        scale_factor: 缩放倍数（如0.5=缩小一半，2=放大一倍）
+        target_width: 目标宽度（像素）
+        target_height: 目标高度（像素）
+        keep_aspect_ratio: 是否保持宽高比（默认True）
+        resampling: 重采样算法（nearest适合像素艺术，lanczos适合照片）
+        quality: JPEG质量（1-100，仅对JPEG有效）
+        pattern: 文件名模式过滤（可选，如"*.png"只处理PNG，"idle_*.png"只处理idle开头的）
+        
+    Returns:
+        批量处理结果信息
+    """
+    try:
+        scaler = ImageScaler()
+        
+        # 验证参数
+        if not any([scale_factor, target_width, target_height]):
+            return "❌ 错误：必须指定 scale_factor、target_width 或 target_height 至少一个参数"
+        
+        result = scaler.batch_scale(
+            input_dir=input_dir,
+            output_dir=output_dir,
+            scale_factor=scale_factor,
+            target_width=target_width,
+            target_height=target_height,
+            keep_aspect_ratio=keep_aspect_ratio,
+            resampling=resampling,
+            quality=quality,
+            pattern=pattern
+        )
+        
+        if result["success"]:
+            response_text = f"""✅ {result['message']}
+
+处理统计:
+- 输入目录: {result['input_dir']}
+- 输出目录: {result['output_dir']}
+- 总文件数: {result['total_files']}
+- 成功处理: {result['processed_files']}
+- 处理失败: {result['failed_files']}"""
+            
+            # 显示前几个处理结果
+            if result['files']:
+                response_text += "\n\n处理详情（前5个）:"
+                for file_info in result['files'][:5]:
+                    status = "✓" if file_info['success'] else "✗"
+                    response_text += f"\n{status} {file_info['file']}"
+                    if file_info['success'] and file_info['new_size']:
+                        response_text += f" -> {file_info['new_size'][0]}x{file_info['new_size'][1]}"
+                
+                if len(result['files']) > 5:
+                    response_text += f"\n... 还有 {len(result['files']) - 5} 个文件"
+        else:
+            response_text = f"❌ {result['message']}"
+        
+        return response_text
+        
+    except Exception as e:
+        return f"❌ 错误: {str(e)}"
+
+
+# 资源定义
+@mcp.resource("image://scaling-guide")
+def get_image_scaling_guide() -> str:
+    """获取图片缩放使用指南"""
+    return """# 图片缩放工具使用指南
+
+## 功能概述
+支持单张或批量缩放图片，可按比例、指定尺寸或缩放倍数进行调整。
+
+## 缩放方式
+
+### 1. 按缩放倍数
+```python
+scale_image(
+    input_path="image.png",
+    scale_factor=0.5  # 缩小一半
+)
+```
+
+### 2. 指定目标尺寸
+```python
+scale_image(
+    input_path="image.png",
+    target_width=512,
+    target_height=512,
+    keep_aspect_ratio=True  # 保持宽高比
+)
+```
+
+### 3. 只指定宽度或高度
+```python
+scale_image(
+    input_path="image.png",
+    target_width=720  # 自动计算高度
+)
+```
+
+### 4. 批量处理
+```python
+batch_scale_images(
+    input_dir="./images",
+    scale_factor=0.5,
+    pattern="*.png"  # 只处理PNG文件
+)
+```
+
+## 重采样算法
+
+- **nearest**: 最近邻，适合像素艺术（保持锐利边缘）
+- **bilinear**: 双线性，平衡速度和质量
+- **bicubic**: 双三次，质量较好
+- **lanczos**: 高质量，适合照片（默认）
+- **box**: 箱式滤波
+- **hamming**: Hamming窗口
+
+## 使用场景
+
+### 像素艺术缩放
+```python
+scale_image(
+    input_path="sprite.png",
+    scale_factor=2,
+    resampling="nearest"  # 保持像素完美
+)
+```
+
+### 照片缩略图
+```python
+scale_image(
+    input_path="photo.jpg",
+    target_width=300,
+    resampling="lanczos",
+    quality=85
+)
+```
+
+### 批量生成不同尺寸
+```python
+# 生成多个尺寸
+for size in [64, 128, 256, 512]:
+    scale_image(
+        input_path="icon.png",
+        target_width=size,
+        target_height=size,
+        output_path=f"icon_{size}.png"
+    )
+```
+
+## 注意事项
+
+1. 支持格式：PNG, JPG, JPEG, GIF, BMP, TIFF, WebP
+2. keep_aspect_ratio=True 时会按较小的缩放比例调整
+3. quality 参数仅对 JPEG 格式有效
+4. 输出文件默认命名：{原名}_{宽}x{高}.{扩展名}
 """
 
 
