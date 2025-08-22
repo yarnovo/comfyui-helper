@@ -41,12 +41,7 @@ def compose_sprite_sheet(project_dir: str, generate_preview: bool = True) -> str
             return f"❌ 项目目录不存在: {project_dir}"
         
         config_file = project_path / "config.json"
-        input_frames_dir = project_path / "input_frames"
         output_dir = project_path / "output"
-        
-        # 检查必要文件和目录
-        if not input_frames_dir.exists():
-            return f"❌ 未找到输入帧目录: {input_frames_dir}"
         
         # 创建输出目录
         output_dir.mkdir(exist_ok=True)
@@ -67,6 +62,21 @@ def compose_sprite_sheet(project_dir: str, generate_preview: bool = True) -> str
             return f"❌ 配置文件验证失败: {str(e)}"
         except Exception as e:
             return f"❌ 加载配置文件失败: {str(e)}"
+        
+        # 从配置中获取 input_frames 路径，如果没有则使用默认值
+        input_frames_path = config.get('input_frames', './input_frames')
+        
+        # 处理相对路径和绝对路径
+        if Path(input_frames_path).is_absolute():
+            # 绝对路径直接使用
+            input_frames_dir = Path(input_frames_path)
+        else:
+            # 相对路径相对于项目目录
+            input_frames_dir = project_path / input_frames_path
+        
+        # 检查输入帧目录是否存在
+        if not input_frames_dir.exists():
+            return f"❌ 未找到输入帧目录: {input_frames_dir}"
         
         # 使用固定的输出文件名
         output_path = output_dir / "spritesheet.png"
@@ -188,6 +198,9 @@ def get_config_template() -> str:
 - **animations**: 动画配置对象（必需，决定输出布局）
 
 ### 可选字段
+- **input_frames**: 输入帧目录路径（默认 "./input_frames"）
+  - 支持相对路径：相对于项目目录，如 "./frames"、"../sprites"
+  - 支持绝对路径：如 "/home/user/sprites"
 - **background_color**: 背景颜色 [R, G, B, A]，范围 0-255，默认 [0, 0, 0, 0]（透明）
 
 ### animations 配置详解

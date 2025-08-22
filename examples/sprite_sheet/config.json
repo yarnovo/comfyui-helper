@@ -3,6 +3,7 @@
   "frame_height": 96,
   "cols": 8,
   "rows": 16,
+  "input_frames": "./input_frames",
   "background_color": [0, 0, 0, 0],
   "animations": {
     "idle_down": {"row": 0, "frames": 8},
