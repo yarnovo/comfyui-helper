@@ -79,6 +79,7 @@ class SpriteSheetComposer:
     def find_frames(self, input_dir: str) -> Dict[str, List[str]]:
         """
         扫描输入目录，按动画类型分组找到所有帧文件
+        目录结构：animation_name/001.png
         
         Args:
             input_dir: 输入目录路径
@@ -92,25 +93,29 @@ class SpriteSheetComposer:
         
         found_frames = {}
         
-        for file_path in input_path.glob("*.png"):
-            filename = file_path.stem
-            parts = filename.split('_')
-            
-            if len(parts) >= 3:
-                anim_name = '_'.join(parts[:-1])
-                frame_num_str = parts[-1]
+        # 遍历所有子目录
+        for subdir in input_path.iterdir():
+            if subdir.is_dir():
+                anim_name = subdir.name
+                frame_files = []
                 
-                try:
-                    frame_num = int(frame_num_str)
-                    if anim_name not in found_frames:
-                        found_frames[anim_name] = []
-                    found_frames[anim_name].append((frame_num, str(file_path)))
-                except ValueError:
-                    logger.warning(f"无法解析帧序号: {filename}")
+                # 查找子目录中的所有PNG文件
+                for file_path in subdir.glob("*.png"):
+                    filename = file_path.stem
+                    try:
+                        # 将文件名解析为数字（如 001, 002）
+                        frame_num = int(filename)
+                        frame_files.append((frame_num, str(file_path)))
+                    except ValueError:
+                        logger.warning(f"无法解析帧序号: {file_path}")
+                
+                if frame_files:
+                    frame_files.sort(key=lambda x: x[0])
+                    found_frames[anim_name] = [path for _, path in frame_files]
+                    logger.info(f"在子目录 {anim_name} 中找到 {len(frame_files)} 帧")
         
-        for anim_name in found_frames:
-            found_frames[anim_name].sort(key=lambda x: x[0])
-            found_frames[anim_name] = [path for _, path in found_frames[anim_name]]
+        if not found_frames:
+            logger.warning("未找到任何动画帧。请确保目录结构为: animation_name/001.png")
         
         return found_frames
     

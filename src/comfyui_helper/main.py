@@ -127,9 +127,13 @@ def get_project_structure() -> str:
 your_project/              # 项目根目录
 ├── config.json           # 配置文件（必需）
 ├── input_frames/         # 输入精灵帧目录（必需）
-│   ├── idle_down_001.png
-│   ├── idle_down_002.png
-│   ├── walk_left_01.png
+│   ├── idle_down/       # 动画子目录
+│   │   ├── 001.png
+│   │   ├── 002.png
+│   │   └── ...
+│   ├── walk_left/       # 动画子目录
+│   │   ├── 001.png
+│   │   └── ...
 │   └── ...
 └── output/              # 输出目录（自动创建）
     ├── spritesheet.png      # 生成的精灵表
@@ -137,11 +141,11 @@ your_project/              # 项目根目录
     └── spritesheet.preview.png # 预览图（可选）
 ```
 
-## 文件命名规范
-精灵帧文件必须按照以下格式命名：
-- 格式：`{动画名}_{方向}_{帧序号}.png`
-- 示例：`idle_down_001.png`, `walk_left_01.png`, `attack_up_1.png`
-- 帧序号可以是 1, 01, 001 等格式
+## 文件组织规范
+精灵帧文件必须按照以下方式组织：
+- 目录结构：`input_frames/{动画名称}/{帧序号}.png`
+- 示例：`input_frames/idle_down/001.png`, `input_frames/walk_left/001.png`
+- 帧序号建议使用3位数字格式（001, 002, 003...）
 
 ## 支持的动画类型
 - idle_down, idle_left, idle_right, idle_up
@@ -211,7 +215,7 @@ def get_config_template() -> str:
 
 **工作原理**：
 1. 程序扫描 input_frames 目录中的文件
-2. 根据文件名前缀（如 `idle_down_001.png` → `idle_down`）匹配动画配置
+2. 根据子目录名称（如 `idle_down/001.png` → `idle_down`）匹配动画配置
 3. 将匹配到的帧按序号排列在指定行
 4. 未在 animations 中定义的动画文件将被忽略
 
@@ -238,16 +242,18 @@ mkdir input_frames
 ```
 
 ## 步骤 2：准备精灵帧图片
-将您的精灵帧图片放入 `input_frames/` 目录，命名示例：
+将您的精灵帧图片按动画类型组织到子目录中：
 ```
 input_frames/
-├── idle_down_001.png
-├── idle_down_002.png
-├── idle_down_003.png
-├── idle_down_004.png
-├── walk_left_001.png
-├── walk_left_002.png
-├── walk_left_003.png
+├── idle_down/
+│   ├── 001.png
+│   ├── 002.png
+│   ├── 003.png
+│   └── 004.png
+├── walk_left/
+│   ├── 001.png
+│   ├── 002.png
+│   └── 003.png
 └── ...
 ```
 
@@ -530,84 +536,6 @@ def scale_image(
         return f"❌ 错误: {str(e)}"
 
 
-@mcp.tool()
-def batch_scale_images(
-    input_dir: str,
-    output_dir: str = None,
-    scale_factor: float = None,
-    target_width: int = None,
-    target_height: int = None,
-    keep_aspect_ratio: bool = True,
-    resampling: str = 'lanczos',
-    quality: int = 95,
-    pattern: str = None
-) -> str:
-    """
-    批量缩放目录中的图片
-    
-    Args:
-        input_dir: 输入目录路径（处理该目录下的所有图片）
-        output_dir: 输出目录路径（可选，默认在输入目录同级创建 {输入目录名}_scaled 文件夹）
-        scale_factor: 缩放倍数（如0.5=缩小一半，2=放大一倍）
-        target_width: 目标宽度（像素）
-        target_height: 目标高度（像素）
-        keep_aspect_ratio: 是否保持宽高比（默认True）
-        resampling: 重采样算法（nearest适合像素艺术，lanczos适合照片）
-        quality: JPEG质量（1-100，仅对JPEG有效）
-        pattern: 文件名模式过滤（可选，如"*.png"只处理PNG，"idle_*.png"只处理idle开头的）
-        
-    Returns:
-        批量处理结果信息
-    """
-    try:
-        scaler = ImageScaler()
-        
-        # 验证参数
-        if not any([scale_factor, target_width, target_height]):
-            return "❌ 错误：必须指定 scale_factor、target_width 或 target_height 至少一个参数"
-        
-        result = scaler.batch_scale(
-            input_dir=input_dir,
-            output_dir=output_dir,
-            scale_factor=scale_factor,
-            target_width=target_width,
-            target_height=target_height,
-            keep_aspect_ratio=keep_aspect_ratio,
-            resampling=resampling,
-            quality=quality,
-            pattern=pattern
-        )
-        
-        if result["success"]:
-            response_text = f"""✅ {result['message']}
-
-处理统计:
-- 输入目录: {result['input_dir']}
-- 输出目录: {result['output_dir']}
-- 总文件数: {result['total_files']}
-- 成功处理: {result['processed_files']}
-- 处理失败: {result['failed_files']}"""
-            
-            # 显示前几个处理结果
-            if result['files']:
-                response_text += "\n\n处理详情（前5个）:"
-                for file_info in result['files'][:5]:
-                    status = "✓" if file_info['success'] else "✗"
-                    response_text += f"\n{status} {file_info['file']}"
-                    if file_info['success'] and file_info['new_size']:
-                        response_text += f" -> {file_info['new_size'][0]}x{file_info['new_size'][1]}"
-                
-                if len(result['files']) > 5:
-                    response_text += f"\n... 还有 {len(result['files']) - 5} 个文件"
-        else:
-            response_text = f"❌ {result['message']}"
-        
-        return response_text
-        
-    except Exception as e:
-        return f"❌ 错误: {str(e)}"
-
-
 # 资源定义
 @mcp.resource("image://scaling-guide")
 def get_image_scaling_guide() -> str:
@@ -645,14 +573,6 @@ scale_image(
 )
 ```
 
-### 4. 批量处理
-```python
-batch_scale_images(
-    input_dir="./images",
-    scale_factor=0.5,
-    pattern="*.png"  # 只处理PNG文件
-)
-```
 
 ## 重采样算法
 

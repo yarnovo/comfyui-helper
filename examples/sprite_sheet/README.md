@@ -6,17 +6,21 @@
 
 ```
 sprite_sheet/
-├── character_sprite/         # 示例项目
-│   ├── config.json          # 配置文件
-│   ├── input_frames/        # 输入精灵帧
-│   │   ├── idle_down_001.png
-│   │   ├── idle_down_002.png
+├── config.json              # 配置文件
+├── input_frames/           # 输入精灵帧目录
+│   ├── idle_down/         # 各动画子目录
+│   │   ├── 001.png
+│   │   ├── 002.png
 │   │   └── ...
-│   └── output/             # 输出精灵表
-│       ├── character_sprite_spritesheet.png
-│       ├── character_sprite_spritesheet.json
-│       └── character_sprite_spritesheet.preview.png
-└── README.md               # 本说明文件
+│   ├── walk_left/
+│   │   ├── 001.png
+│   │   └── ...
+│   └── ...
+├── output/                 # 输出精灵表
+│   ├── spritesheet.png
+│   ├── spritesheet.json
+│   └── spritesheet.preview.png
+└── README.md              # 本说明文件
 ```
 
 ## 如何使用
@@ -72,13 +76,14 @@ print(f"成功合成精灵表，处理了 {result['processed_frames']} 帧")
 }
 ```
 
-## 精灵帧命名规范
+## 精灵帧目录结构
 
-精灵帧文件必须按照以下格式命名：
-- 格式：`{动画名}_{方向}_{帧序号}.png`
-- 示例：`idle_down_001.png`, `walk_left_02.png`
+精灵帧文件必须按照以下目录结构组织：
+- 目录格式：`input_frames/{动画名称}/`
+- 文件格式：`{帧序号}.png`（例如：001.png, 002.png）
+- 完整路径示例：`input_frames/idle_down/001.png`
 
-支持的动画类型：
+支持的动画类型（每个都是独立的子目录）：
 - `idle_down`, `idle_left`, `idle_right`, `idle_up`
 - `walk_down`, `walk_left`, `walk_right`, `walk_up`
 - `run_down`, `run_left`, `run_right`, `run_up`
