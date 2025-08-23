@@ -8,16 +8,12 @@ os.environ['no_proxy'] = 'localhost,127.0.0.1'
 
 import gradio as gr
 from pathlib import Path
-from PIL import Image
-from typing import List, Dict, Optional, Tuple
+from typing import List, Optional, Tuple
 import logging
 import json
 from datetime import datetime
 import re
 import sys
-import threading
-import time
-import io
 import tempfile
 
 # 支持直接运行
@@ -102,96 +98,6 @@ class GifMakerGUI:
         """获取所有图片路径列表"""
         return self.image_files.copy()
     
-    def set_start_image(self, selected_images) -> Tuple[str, str]:
-        """设置开始图片"""
-        logger.info(f"set_start_image received: {selected_images}, type: {type(selected_images)}")
-        
-        if not selected_images:
-            return "", "未设置"
-        
-        # Gradio Gallery 可能返回不同格式
-        # 1. 索引列表 [0] 
-        # 2. 文件路径列表
-        # 3. Event SelectData 对象
-        
-        # 如果是 SelectData 对象，获取索引
-        if hasattr(selected_images, 'index'):
-            selected_index = selected_images.index
-            if 0 <= selected_index < len(self.image_files):
-                img_path = self.image_files[selected_index]
-                return str(img_path), f"{Path(img_path).name}"
-        
-        # 如果是列表
-        if isinstance(selected_images, list) and len(selected_images) > 0:
-            first_item = selected_images[0]
-            
-            # 如果是索引
-            if isinstance(first_item, int) and 0 <= first_item < len(self.image_files):
-                img_path = self.image_files[first_item]
-                return str(img_path), f"{Path(img_path).name}"
-            
-            # 如果是文件路径
-            if isinstance(first_item, str):
-                for idx, file_path in enumerate(self.image_files):
-                    if file_path == first_item or Path(file_path).name == Path(first_item).name:
-                        return str(file_path), f"{Path(file_path).name}"
-        
-        return "", "未设置"
-    
-    def set_end_image(self, selected_images) -> Tuple[str, str]:
-        """设置结束图片"""
-        logger.info(f"set_end_image received: {selected_images}, type: {type(selected_images)}")
-        
-        if not selected_images:
-            return "", "未设置"
-        
-        # 如果是 SelectData 对象，获取索引
-        if hasattr(selected_images, 'index'):
-            selected_index = selected_images.index
-            if 0 <= selected_index < len(self.image_files):
-                img_path = self.image_files[selected_index]
-                return str(img_path), f"{Path(img_path).name}"
-        
-        # 如果是列表
-        if isinstance(selected_images, list) and len(selected_images) > 0:
-            first_item = selected_images[0]
-            
-            # 如果是索引
-            if isinstance(first_item, int) and 0 <= first_item < len(self.image_files):
-                img_path = self.image_files[first_item]
-                return str(img_path), f"{Path(img_path).name}"
-            
-            # 如果是文件路径
-            if isinstance(first_item, str):
-                for idx, file_path in enumerate(self.image_files):
-                    if file_path == first_item or Path(file_path).name == Path(first_item).name:
-                        return str(file_path), f"{Path(file_path).name}"
-        
-        return "", "未设置"
-    
-    def update_selection(self, start_path: str, end_path: str) -> Tuple[str, List]:
-        """根据开始和结束图片更新选择范围"""
-        if not start_path or not end_path:
-            return "请设置开始和结束图片", []
-        
-        try:
-            start_idx = self.image_files.index(start_path)
-            end_idx = self.image_files.index(end_path)
-            
-            if start_idx > end_idx:
-                # 交换顺序
-                start_idx, end_idx = end_idx, start_idx
-            
-            # 获取范围内的所有文件
-            selected_files = self.image_files[start_idx:end_idx + 1]
-            
-            info_text = f"已选择 {len(selected_files)} 张图片\n"
-            info_text += f"从 {Path(self.image_files[start_idx]).name} 到 {Path(self.image_files[end_idx]).name}"
-            
-            return info_text, selected_files
-            
-        except ValueError as e:
-            return f"错误：{str(e)}", []
     
     def preview_gif(self, selected_files: List, duration: int, 
                     loop: int, optimize: bool, resize_width: Optional[int], 
@@ -331,19 +237,6 @@ class GifMakerGUI:
         with gr.Blocks(title="GIF 生成器", theme=gr.themes.Soft()) as self.app:
             gr.Markdown("# 🎬 GIF 动画生成器")
             
-            # 文件夹选择区域
-            with gr.Row():
-                folder_input = gr.Textbox(
-                    label="📁 图片文件夹路径",
-                    value="",
-                    placeholder="输入图片文件夹路径",
-                    scale=4
-                )
-                load_folder_btn = gr.Button("🔄 加载文件夹", variant="primary", scale=1)
-            
-            # 状态显示
-            status_display = gr.Markdown("📌 请选择包含图片的文件夹")
-            
             # 存储当前选择的状态
             start_index = gr.State(-1)
             end_index = gr.State(-1)
@@ -407,37 +300,105 @@ class GifMakerGUI:
             # 存储当前选中的图片索引
             current_selected_index = gr.State(-1)
             
-            # Gallery 选择事件
-            def on_gallery_select(evt: gr.SelectData):
-                return evt.index if evt else -1
+            # 存储当前显示的所有图片路径
+            displayed_images = gr.State(self.get_all_images())
+            
+            # Gallery 选择事件 - 现在可以自定义处理逻辑
+            def on_gallery_select(evt: gr.SelectData, current_images):
+                """Gallery选择事件的主处理器"""
+                # 这里可以添加自定义逻辑
+                # 例如：记录选择历史、验证选择、触发其他操作等
+                
+                if evt:
+                    logger.debug(f"Gallery选择事件: index={evt.index}")
+                    # 可以在这里添加更多自定义处理
+                    # 例如：检查图片是否有效、预加载相关数据等
+                    return evt.index
+                return -1
+            
+            # Gallery 更新时同步更新内部文件列表
+            def on_gallery_update(gallery_value):
+                """当Gallery内容更新时，同步更新内部文件列表"""
+                if gallery_value:
+                    # Gallery可能返回不同格式：
+                    # 1. 字符串列表 ['path1', 'path2']
+                    # 2. 元组列表 [('path1', 'label1'), ('path2', 'label2')]
+                    processed_files = []
+                    for item in gallery_value:
+                        if isinstance(item, tuple):
+                            # 如果是元组，取第一个元素（文件路径）
+                            processed_files.append(item[0])
+                        else:
+                            # 如果是字符串，直接使用
+                            processed_files.append(item)
+                    
+                    self.image_files = processed_files
+                    logger.debug(f"Gallery更新，新文件数量: {len(self.image_files)}, 类型: {type(gallery_value[0]) if gallery_value else None}")
+                    return processed_files
+                return self.get_all_images()
             
             all_images_gallery.select(
                 fn=on_gallery_select,
+                inputs=[displayed_images],
                 outputs=[current_selected_index]
             )
             
-            # 设为开始图片
-            def set_start(idx):
-                if idx >= 0 and idx < len(self.image_files):
-                    file_path = self.image_files[idx]
+            # 当Gallery文件改变时更新displayed_images
+            all_images_gallery.change(
+                fn=on_gallery_update,
+                inputs=[all_images_gallery],
+                outputs=[displayed_images]
+            )
+            
+            # 设为开始图片 - 使用当前显示的图片列表
+            def set_start(idx, current_images):
+                if current_images and idx >= 0 and idx < len(current_images):
+                    item = current_images[idx]
+                    # 处理可能的元组格式
+                    if isinstance(item, tuple):
+                        file_path = item[0]  # 元组的第一个元素是文件路径
+                    else:
+                        file_path = item
+                    
                     file_name = Path(file_path).name
+                    logger.debug(f"设为开始图片: idx={idx}, path={file_path}, type={type(item)}")
                     return idx, file_path, file_name  # 返回索引、图片路径和文件名
+                logger.debug(f"设为开始图片失败: idx={idx}, images_count={len(current_images) if current_images else 0}")
                 return -1, None, "未设置"  # 返回默认值
             
-            # 设为结束图片  
-            def set_end(idx):
-                if idx >= 0 and idx < len(self.image_files):
-                    file_path = self.image_files[idx]
+            # 设为结束图片 - 使用当前显示的图片列表
+            def set_end(idx, current_images):
+                if current_images and idx >= 0 and idx < len(current_images):
+                    item = current_images[idx]
+                    # 处理可能的元组格式
+                    if isinstance(item, tuple):
+                        file_path = item[0]  # 元组的第一个元素是文件路径
+                    else:
+                        file_path = item
+                    
                     file_name = Path(file_path).name
+                    logger.debug(f"设为结束图片: idx={idx}, path={file_path}, type={type(item)}")
                     return idx, file_path, file_name  # 返回索引、图片路径和文件名
+                logger.debug(f"设为结束图片失败: idx={idx}, images_count={len(current_images) if current_images else 0}")
                 return -1, None, "未设置"  # 返回默认值
             
-            # 更新选择范围（返回选中的文件列表）
-            def update_range(start_idx, end_idx):
-                if start_idx >= 0 and end_idx >= 0:
+            # 更新选择范围（返回选中的文件列表）- 使用当前显示的图片列表
+            def update_range(start_idx, end_idx, current_images):
+                if current_images and start_idx >= 0 and end_idx >= 0:
                     if start_idx > end_idx:
                         start_idx, end_idx = end_idx, start_idx
-                    selected = self.image_files[start_idx:end_idx + 1]
+                    
+                    # 处理可能的元组格式
+                    selected = []
+                    for i in range(start_idx, end_idx + 1):
+                        if i < len(current_images):
+                            item = current_images[i]
+                            if isinstance(item, tuple):
+                                selected.append(item[0])  # 元组的第一个元素是文件路径
+                            else:
+                                selected.append(item)
+                    
+                    logger.debug(f"更新选择范围: {start_idx} 到 {end_idx}, 共 {len(selected)} 个文件")
                     return selected
                 return []
             
@@ -464,25 +425,25 @@ class GifMakerGUI:
                     logger.error(f"生成 GIF 失败：{e}")
                 return None
             
-            # 点击设为开始
+            # 点击设为开始 - 添加displayed_images作为输入
             set_start_btn.click(
                 fn=set_start,
-                inputs=[current_selected_index],
+                inputs=[current_selected_index, displayed_images],
                 outputs=[start_index, start_preview, start_filename]  # 输出索引、图片和文件名
             ).then(
                 fn=update_range,
-                inputs=[start_index, end_index],
+                inputs=[start_index, end_index, displayed_images],
                 outputs=[current_selection]  # 只输出当前选择的文件列表
             )
             
-            # 点击设为结束
+            # 点击设为结束 - 添加displayed_images作为输入
             set_end_btn.click(
                 fn=set_end,
-                inputs=[current_selected_index],
+                inputs=[current_selected_index, displayed_images],
                 outputs=[end_index, end_preview, end_filename]  # 输出索引、图片和文件名
             ).then(
                 fn=update_range,
-                inputs=[start_index, end_index],
+                inputs=[start_index, end_index, displayed_images],
                 outputs=[current_selection]  # 只输出当前选择的文件列表
             )
             
@@ -493,155 +454,6 @@ class GifMakerGUI:
                 outputs=[gif_output]
             )
             
-            # 加载新文件夹功能
-            def load_new_folder(folder_path):
-                """加载新的图片文件夹"""
-                try:
-                    from pathlib import Path
-                    import platform
-                    
-                    logger.debug(f"开始加载文件夹，原始输入: '{folder_path}'")
-                    folder_path = folder_path.strip()
-                    logger.debug(f"去除空格后: '{folder_path}'")
-                    
-                    # Windows路径到WSL路径的转换
-                    def convert_windows_to_wsl_path(path_str):
-                        """将Windows路径转换为WSL路径"""
-                        logger.debug(f"检查是否需要转换路径: '{path_str}'")
-                        # 检查是否是Windows路径格式 (C:\ 或 C:/)
-                        if len(path_str) >= 3 and path_str[1] == ':' and (path_str[2] == '\\' or path_str[2] == '/'):
-                            # 获取盘符（转为小写）
-                            drive_letter = path_str[0].lower()
-                            logger.debug(f"检测到Windows路径，盘符: {drive_letter}")
-                            # 获取路径部分，去掉 "C:" 或 "C:\"
-                            path_part = path_str[2:] if path_str[2] in ['\\', '/'] else path_str[3:]
-                            # 替换反斜杠为正斜杠
-                            path_part = path_part.replace('\\', '/')
-                            # 构建WSL路径
-                            wsl_path = f"/mnt/{drive_letter}{path_part}"
-                            logger.debug(f"转换后的WSL路径: '{wsl_path}'")
-                            return wsl_path
-                        logger.debug(f"不是Windows路径，保持原样")
-                        return path_str
-                    
-                    # 如果在WSL环境中，尝试转换Windows路径
-                    system_info = platform.uname().release
-                    logger.debug(f"系统信息: {system_info}")
-                    if 'microsoft' in system_info.lower() or 'WSL' in system_info:
-                        original_path = folder_path
-                        folder_path = convert_windows_to_wsl_path(folder_path)
-                        if original_path != folder_path:
-                            logger.info(f"转换Windows路径: {original_path} -> {folder_path}")
-                    
-                    if not folder_path:
-                        return (
-                            gr.update(),  # all_images_gallery
-                            "❌ 请输入文件夹路径",  # status_display
-                            -1,  # start_index
-                            -1,  # end_index
-                            [],  # current_selection
-                            None,  # start_preview
-                            "未设置",  # start_filename
-                            None,  # end_preview
-                            "未设置"  # end_filename
-                        )
-                    
-                    folder = Path(folder_path)
-                    logger.debug(f"创建Path对象: {folder}")
-                    logger.debug(f"检查路径是否存在: {folder.exists()}")
-                    
-                    if not folder.exists():
-                        logger.error(f"文件夹不存在: {folder_path}")
-                        # 尝试列出父目录内容以帮助调试
-                        parent = folder.parent
-                        if parent.exists():
-                            logger.debug(f"父目录 {parent} 存在")
-                            try:
-                                items = list(parent.iterdir())[:10]  # 只列出前10个
-                                logger.debug(f"父目录内容示例: {items}")
-                            except Exception as e:
-                                logger.debug(f"无法列出父目录内容: {e}")
-                        return (
-                            gr.update(),
-                            f"❌ 文件夹不存在：`{folder_path}`",
-                            -1, -1, [], None, "未设置", None, "未设置"
-                        )
-                    
-                    logger.debug(f"检查是否是目录: {folder.is_dir()}")
-                    if not folder.is_dir():
-                        logger.error(f"路径不是文件夹: {folder_path}")
-                        return (
-                            gr.update(),
-                            f"❌ 路径不是文件夹：`{folder_path}`",
-                            -1, -1, [], None, "未设置", None, "未设置"
-                        )
-                    
-                    # 更新实例的属性
-                    logger.info(f"更新input_dir: {str(folder)}")
-                    self.input_dir = str(folder)
-                    
-                    logger.debug(f"调用load_images()方法")
-                    self.load_images()
-                    
-                    logger.info(f"加载完成，找到 {len(self.image_files)} 个图片文件")
-                    if self.image_files:
-                        logger.debug(f"前5个文件: {self.image_files[:5]}")
-                    
-                    if not self.image_files:
-                        logger.warning(f"文件夹中没有找到数字命名的图片")
-                        # 列出文件夹内容以帮助调试
-                        try:
-                            all_files = list(folder.iterdir())[:20]
-                            logger.debug(f"文件夹中的文件（前20个）: {all_files}")
-                        except Exception as e:
-                            logger.debug(f"无法列出文件夹内容: {e}")
-                        return (
-                            gr.update(value=[]),
-                            f"⚠️ 文件夹中没有找到数字命名的图片：`{folder_path}`",
-                            -1, -1, [], None, "未设置", None, "未设置"
-                        )
-                    
-                    # 成功加载
-                    logger.info(f"成功加载文件夹，准备更新Gallery")
-                    gallery_images = self.get_all_images()
-                    logger.debug(f"Gallery将显示 {len(gallery_images)} 个图片")
-                    
-                    return (
-                        gr.update(value=gallery_images),  # 更新 gallery
-                        f"✅ 已加载：`{self.input_dir}` - 找到 **{len(self.image_files)}** 个图片文件",
-                        -1,  # 重置 start_index
-                        -1,  # 重置 end_index
-                        [],  # 清空 current_selection
-                        None,  # 清空 start_preview
-                        "未设置",  # 重置 start_filename
-                        None,  # 清空 end_preview
-                        "未设置"  # 重置 end_filename
-                    )
-                    
-                except Exception as e:
-                    logger.error(f"加载文件夹失败：{e}")
-                    return (
-                        gr.update(),
-                        f"❌ 加载失败：{str(e)}",
-                        -1, -1, [], None, "未设置", None, "未设置"
-                    )
-            
-            # 绑定加载文件夹事件
-            load_folder_btn.click(
-                fn=load_new_folder,
-                inputs=[folder_input],
-                outputs=[
-                    all_images_gallery,
-                    status_display,
-                    start_index,
-                    end_index,
-                    current_selection,
-                    start_preview,
-                    start_filename,
-                    end_preview,
-                    end_filename
-                ]
-            )
         
         return self.app
     
@@ -664,7 +476,7 @@ class GifMakerGUI:
         ]
         
         # 设置信号处理器，用于 Ctrl+C 退出
-        def signal_handler(sig, frame):
+        def signal_handler(*args):
             logger.info("\n收到退出信号，正在关闭服务器...")
             # 直接强制退出
             os._exit(0)
@@ -728,9 +540,9 @@ if __name__ == "__main__":
     from datetime import datetime
     import os
     
-    # 创建logs目录
-    log_dir = Path(__file__).parent.parent.parent / "logs"
-    log_dir.mkdir(exist_ok=True)
+    # 创建logs目录（在项目根目录下）
+    log_dir = Path(__file__).parent.parent.parent.parent / "logs"
+    log_dir.mkdir(exist_ok=True, parents=True)
     
     # 设置日志文件名（包含时间戳）
     log_file = log_dir / f"gif_maker_gui_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
