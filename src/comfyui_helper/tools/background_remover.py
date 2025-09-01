@@ -43,11 +43,35 @@ class BackgroundRemover:
             
         logger.info("正在加载 RMBG-2.0 模型...")
         
-        # 加载模型（使用 Hugging Face 默认缓存目录）
-        self.model = AutoModelForImageSegmentation.from_pretrained(
-            'briaai/RMBG-2.0',
-            trust_remote_code=True
-        )
+        try:
+            # 临时修复：猴子补丁修复 transformers 库的 bug
+            from transformers import configuration_utils
+            
+            # 为 Config 类添加缺失的 is_encoder_decoder 属性
+            original_getattr = configuration_utils.PretrainedConfig.__getattribute__
+            
+            def patched_getattr(self, key):
+                try:
+                    return original_getattr(self, key)
+                except AttributeError:
+                    if key == 'is_encoder_decoder':
+                        return False  # 默认返回 False，因为 RMBG-2.0 不是编码器-解码器模型
+                    raise
+            
+            configuration_utils.PretrainedConfig.__getattribute__ = patched_getattr
+            
+            # 加载模型（使用官方方法）
+            self.model = AutoModelForImageSegmentation.from_pretrained(
+                'briaai/RMBG-2.0',
+                trust_remote_code=True
+            )
+            
+            # 恢复原始方法
+            configuration_utils.PretrainedConfig.__getattribute__ = original_getattr
+            
+        except Exception as e:
+            logger.error(f"加载模型失败: {e}")
+            raise
         
         # 设置精度和设备
         if self.device == 'cuda':
