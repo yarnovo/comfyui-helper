@@ -10,9 +10,10 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Resource, TextContent
 
-from .sprite_composer import SpriteSheetComposer
-from .video_frame_extractor import VideoFrameExtractor
-from .image_scaler import ImageScaler
+from .tools.sprite_composer import SpriteSheetComposer
+from .tools.video_frame_extractor import VideoFrameExtractor
+from .tools.image_scaler import ImageScaler
+from .tools.background_remover import BackgroundRemover
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -534,6 +535,247 @@ def scale_image(
         
     except Exception as e:
         return f"❌ 错误: {str(e)}"
+
+
+@mcp.tool()
+def remove_background(
+    input_path: str,
+    output_path: str = None,
+    use_white_bg: bool = False,
+    alpha_threshold: int = 0
+) -> str:
+    """
+    使用 RMBG-2.0 模型移除图像背景
+    
+    Args:
+        input_path: 输入图像路径
+        output_path: 输出路径（可选，默认在同目录生成 {原名}_no_bg.png）
+        use_white_bg: 是否使用白色背景（False=透明背景，True=白色背景）
+        alpha_threshold: Alpha 阈值（0-255），低于此值的像素将完全透明
+        
+    Returns:
+        处理结果信息
+    """
+    try:
+        from pathlib import Path
+        
+        # 创建背景移除器（自动选择最佳设备）
+        remover = BackgroundRemover()
+        
+        # 处理输入路径
+        input_file = Path(input_path)
+        if not input_file.exists():
+            return f"❌ 错误：输入文件不存在: {input_path}"
+        
+        # 设置输出路径
+        if output_path is None:
+            output_path = input_file.parent / f"{input_file.stem}_no_bg.png"
+        else:
+            output_path = Path(output_path)
+            
+        # 移除背景
+        result_image = remover.remove_background(
+            image=input_file,
+            output_path=output_path,
+            alpha_matting=not use_white_bg,
+            alpha_threshold=alpha_threshold
+        )
+        
+        # 清理缓存
+        remover.clear_cache()
+        
+        response_text = f"""✅ 背景移除成功！
+
+图像信息:
+- 输入文件: {input_path}
+- 输出文件: {output_path}
+- 背景类型: {'白色背景' if use_white_bg else '透明背景'}
+- Alpha 阈值: {alpha_threshold}
+- 使用设备: {remover.device.upper()}
+- 图像尺寸: {result_image.size[0]}x{result_image.size[1]}"""
+        
+        return response_text
+        
+    except Exception as e:
+        logger.error(f"背景移除失败: {e}")
+        return f"❌ 错误: {str(e)}"
+
+
+@mcp.tool()
+def batch_remove_background(
+    input_dir: str,
+    output_dir: str = None,
+    use_white_bg: bool = False,
+    alpha_threshold: int = 0,
+    extensions: list = None
+) -> str:
+    """
+    批量移除多个图像的背景
+    
+    Args:
+        input_dir: 输入目录路径
+        output_dir: 输出目录路径（可选，默认在输入目录创建 {目录名}_no_bg/）
+        use_white_bg: 是否使用白色背景（False=透明背景，True=白色背景）
+        alpha_threshold: Alpha 阈值（0-255），低于此值的像素将完全透明
+        extensions: 支持的文件扩展名列表（默认: ['.png', '.jpg', '.jpeg', '.webp']）
+        
+    Returns:
+        处理结果信息
+    """
+    try:
+        from pathlib import Path
+        
+        # 创建背景移除器（自动选择最佳设备）
+        remover = BackgroundRemover()
+        
+        # 处理路径
+        input_path = Path(input_dir)
+        if not input_path.exists() or not input_path.is_dir():
+            return f"❌ 错误：输入目录不存在或不是目录: {input_dir}"
+        
+        # 设置输出目录
+        if output_dir is None:
+            output_path = input_path.parent / f"{input_path.name}_no_bg"
+        else:
+            output_path = Path(output_dir)
+            
+        # 设置扩展名
+        if extensions is None:
+            extensions = ['.png', '.jpg', '.jpeg', '.webp']
+        
+        # 批量处理
+        processed = remover.batch_remove_background(
+            input_dir=input_path,
+            output_dir=output_path,
+            extensions=tuple(extensions),
+            alpha_matting=not use_white_bg,
+            alpha_threshold=alpha_threshold
+        )
+        
+        # 清理缓存
+        remover.clear_cache()
+        
+        response_text = f"""✅ 批量背景移除完成！
+
+处理信息:
+- 输入目录: {input_dir}
+- 输出目录: {output_path}
+- 处理文件数: {processed}
+- 背景类型: {'白色背景' if use_white_bg else '透明背景'}
+- Alpha 阈值: {alpha_threshold}
+- 使用设备: {remover.device.upper()}
+- 支持格式: {', '.join(extensions)}"""
+        
+        return response_text
+        
+    except Exception as e:
+        logger.error(f"批量背景移除失败: {e}")
+        return f"❌ 错误: {str(e)}"
+
+
+@mcp.resource("background://removal-guide")
+def get_background_removal_guide() -> str:
+    """获取背景移除使用指南"""
+    return """# 🎨 RMBG-2.0 背景移除工具使用指南
+
+## 功能特点
+- 使用先进的 RMBG-2.0 AI 模型
+- 支持透明背景和白色背景
+- 高质量边缘检测
+- GPU 加速支持（自动检测）
+- 批量处理功能
+
+## 单张图像处理
+
+### 基础用法
+```python
+remove_background(
+    input_path="/path/to/image.png"
+)
+```
+
+### 完整参数
+```python
+remove_background(
+    input_path="/path/to/image.png",
+    output_path="/path/to/output.png",
+    use_white_bg=False,      # False=透明背景，True=白色背景
+    alpha_threshold=0         # 0-255，边缘清晰度控制
+)
+```
+
+## 批量处理
+
+### 处理整个目录
+```python
+batch_remove_background(
+    input_dir="/path/to/images/",
+    output_dir="/path/to/output/",
+    use_white_bg=False,
+    alpha_threshold=0,
+    extensions=['.png', '.jpg', '.jpeg']
+)
+```
+
+## 参数说明
+
+### 背景类型
+- **透明背景**（默认）：适合需要合成的场景
+- **白色背景**：适合不支持透明度的场景
+
+### Alpha 阈值
+- **0**（默认）：保留所有半透明像素，边缘更柔和
+- **50-100**：中等阈值，平衡边缘质量
+- **150-255**：高阈值，边缘更锐利但可能丢失细节
+
+### 设备选择
+系统会自动检测并选择最佳设备：
+- 优先使用 GPU（CUDA）以获得最佳性能
+- 如果 GPU 不可用，自动降级到 CPU
+
+## 使用场景
+
+### 1. 产品图片处理
+```python
+remove_background(
+    input_path="product.jpg",
+    use_white_bg=True,      # 电商常用白底
+    alpha_threshold=100     # 清晰边缘
+)
+```
+
+### 2. 人像抠图
+```python
+remove_background(
+    input_path="portrait.jpg",
+    use_white_bg=False,     # 透明背景便于合成
+    alpha_threshold=0       # 保留头发细节
+)
+```
+
+### 3. 批量处理游戏素材
+```python
+batch_remove_background(
+    input_dir="sprites/",
+    use_white_bg=False,     # 游戏素材需要透明背景
+    extensions=['.png']     # 只处理 PNG 文件
+)
+```
+
+## 性能提示
+
+1. **GPU 加速**：RTX 显卡处理速度比 CPU 快 5-10 倍
+2. **批量处理**：使用批量功能比逐个处理更高效
+3. **图像尺寸**：建议不超过 4K 分辨率以获得最佳效果
+4. **内存使用**：首次运行会下载约 176MB 的模型文件
+
+## 注意事项
+
+- 首次运行需要下载模型（自动完成）
+- 模型缓存在 `~/.cache/comfyui-helper/models/`
+- 支持格式：PNG、JPG、JPEG、WebP
+- 输出默认为 PNG 格式（支持透明度）
+"""
 
 if __name__ == "__main__":
     logger.info("ComfyUI Helper MCP Server 已启动 (FastMCP)")

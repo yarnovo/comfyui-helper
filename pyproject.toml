@@ -6,9 +6,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "gradio>=5.43.1",
+    "kornia>=0.8.1",
     "mcp>=1.13.0",
     "pillow>=11.3.0",
     "pydantic>=2.11.7",
+    "torch>=2.8.0",
+    "torchvision>=0.23.0",
+    "transformers>=4.56.0",
 ]
 
 [tool.setuptools]
