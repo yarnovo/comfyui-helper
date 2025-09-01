@@ -8,7 +8,7 @@
         "run",
         "python",
         "-m",
-        "comfyui_helper"
+        "src.comfyui_helper"
       ],
       "env": {}
     }
