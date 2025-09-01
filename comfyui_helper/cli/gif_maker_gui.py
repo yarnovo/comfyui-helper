@@ -19,7 +19,7 @@ import tempfile
 # 支持直接运行
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-    from src.comfyui_helper.core.gif_maker import GifMaker
+    from comfyui_helper.core.gif_maker import GifMaker
 else:
     from ..core.gif_maker import GifMaker
 

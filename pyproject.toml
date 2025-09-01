@@ -18,4 +18,3 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["comfyui_helper"]
-package-dir = {"" = "src"}
