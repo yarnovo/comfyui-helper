@@ -227,10 +227,10 @@ class SpriteSheetComposer:
             "animations": {}
         }
         
-        # 简化的动画配置格式：只记录行号和帧数（行号从1开始）
+        # 简化的动画配置格式：只记录行号和帧数（行号从0开始）
         for anim_name, anim_config in self.animations.items():
             sprite_config["animations"][anim_name] = {
-                "row": anim_config["row"] + 1,  # 行号从1开始
+                "row": anim_config["row"],  # 行号从0开始
                 "frames": anim_config["frames"]
             }
         
