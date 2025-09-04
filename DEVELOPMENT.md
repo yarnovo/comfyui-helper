@@ -5,20 +5,32 @@
 本项目使用 **FastMCP** 框架，这是 MCP Python SDK 提供的高级 API，让添加新工具变得极其简单。
 
 ```
-src/comfyui_helper/
-├── main.py              # 主文件，包含所有工具定义
-├── sprite_composer.py   # 精灵图处理核心逻辑
-└── __main__.py          # 程序入口
+comfyui_helper/
+├── __init__.py          # 包初始化
+├── __main__.py          # MCP Server 入口点
+├── main.py              # MCP Server 主文件
+├── cli/                 # 命令行工具
+│   ├── __init__.py
+│   ├── main.py          # CLI 统一入口
+│   └── gif_maker_gui.py # GIF 制作器 GUI
+├── core/                # 核心功能模块
+│   ├── __init__.py
+│   ├── gif_maker.py     # GIF 生成器
+│   ├── sprite_composer.py # 精灵图处理
+│   └── bg_remover.py    # 背景移除工具
+└── mcp/                 # MCP 相关
+    ├── __init__.py
+    └── tools/           # MCP 工具定义
 ```
 
 ## 添加新工具的步骤
 
 使用 FastMCP，添加新工具只需要一个装饰器！
 
-### 1. 在 main.py 中添加工具函数
+### 1. 在 mcp/__init__.py 中添加工具函数
 
 ```python
-# src/comfyui_helper/main.py
+# comfyui_helper/mcp/__init__.py
 
 @mcp.tool()
 def your_tool_name(param1: str, param2: int = 10) -> str:
@@ -182,11 +194,70 @@ def load_config(self, config_path):
 - [ ] 更新了 README 文档
 - [ ] 测试通过
 
+## CLI 工具使用
+
+### 全局安装
+
+本项目提供了 `cfh` 命令行工具，可以全局使用：
+
+```bash
+# 使用 uv tool 全局安装
+uv tool install /path/to/comfyui-helper
+
+# 或者在开发模式下安装（仅虚拟环境）
+uv pip install -e .
+source .venv/bin/activate
+```
+
+### 使用 CLI 工具
+
+```bash
+# 查看帮助
+cfh --help
+
+# 启动 GIF 制作器 GUI
+cfh gif-maker
+```
+
+### 添加新的 CLI 命令
+
+1. 在 `cli/` 目录下创建新的模块
+2. 在 `cli/main.py` 中添加新的子命令：
+
+```python
+# comfyui_helper/cli/main.py
+
+def run_your_tool():
+    """运行你的工具"""
+    from .your_tool import main as tool_main
+    tool_main()
+
+# 在 argparse 中添加子命令
+your_parser = subparsers.add_parser(
+    'your-tool',
+    help='你的工具描述'
+)
+```
+
+3. 重新安装以更新命令：
+
+```bash
+# 开发模式
+uv pip install -e .
+
+# 全局安装
+uv tool install --force /path/to/comfyui-helper
+```
+
+### 注意事项
+
+- `uv tool install` 不支持开发模式，代码修改后需要重新安装
+- 开发时建议使用虚拟环境中的命令：`.venv/bin/cfh`
+- 全局命令安装在 `~/.local/bin/cfh`
+
 ## 示例工具
 
-参考 `tools/example_tool.py` 查看完整示例，包括：
-- 多个工具方法
-- 资源定义
-- 提示词模板
-- 参数验证
-- 错误处理
+参考现有工具实现：
+- `core/gif_maker.py` - GIF 生成器
+- `core/bg_remover.py` - 背景移除工具
+- `core/sprite_composer.py` - 精灵图处理

@@ -534,8 +534,8 @@ def run_gif_maker_gui(input_dir: str, port: int = 7860) -> bool:
         return False
 
 
-# 主程序入口
-if __name__ == "__main__":
+def main():
+    """主函数入口"""
     import argparse
     from datetime import datetime
     import os
@@ -572,3 +572,8 @@ if __name__ == "__main__":
     
     # 运行 GUI
     run_gif_maker_gui(input_dir, args.port)
+
+
+# 主程序入口
+if __name__ == "__main__":
+    main()

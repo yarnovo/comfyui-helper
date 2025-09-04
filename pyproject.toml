@@ -16,5 +16,8 @@ dependencies = [
     "timm>=1.0.0",
 ]
 
+[project.scripts]
+cfh = "comfyui_helper.cli.main:main"
+
 [tool.setuptools]
-packages = ["comfyui_helper"]
+packages = ["comfyui_helper", "comfyui_helper.cli", "comfyui_helper.core", "comfyui_helper.mcp"]
