@@ -201,7 +201,11 @@ def load_config(self, config_path):
 本项目提供了 `cfh` 命令行工具，可以全局使用：
 
 ```bash
-# 使用 uv tool 全局安装
+# 使用 uv tool 全局安装（首次安装）
+uv tool install /path/to/comfyui-helper
+
+# 更新已安装的工具（推荐方式：先卸载再安装）
+uv tool uninstall comfyui-helper
 uv tool install /path/to/comfyui-helper
 
 # 或者在开发模式下安装（仅虚拟环境）
@@ -242,16 +246,23 @@ your_parser = subparsers.add_parser(
 3. 重新安装以更新命令：
 
 ```bash
-# 开发模式
+# 开发模式（推荐用于开发调试）
 uv pip install -e .
 
-# 全局安装
-uv tool install --force /path/to/comfyui-helper
+# 全局更新（推荐先卸载再安装）
+uv tool uninstall comfyui-helper
+uv tool install /path/to/comfyui-helper
+
+# 注意：--force 参数可能使用缓存的版本，不一定会更新代码
+# uv tool install --force /path/to/comfyui-helper  # 不推荐
 ```
 
 ### 注意事项
 
 - `uv tool install` 不支持开发模式，代码修改后需要重新安装
+- **重要**：`uv tool install --force` 可能会使用缓存的构建结果，导致代码更新不生效
+- **推荐**：开发时使用 `uv run python -m comfyui_helper.cli.main` 直接运行
+- 生产环境建议先卸载再安装：`uv tool uninstall` 然后 `uv tool install`
 - 开发时建议使用虚拟环境中的命令：`.venv/bin/cfh`
 - 全局命令安装在 `~/.local/bin/cfh`
 
