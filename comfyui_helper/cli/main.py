@@ -9,12 +9,11 @@ from pathlib import Path
 
 def run_gif_maker_gui():
     """运行 GIF 制作器 GUI"""
-    import sys
     # 清除命令行参数，避免传递给 gif_maker_gui
     old_argv = sys.argv
     sys.argv = [sys.argv[0]]
     try:
-        from .gif_maker_gui import main as gif_main
+        from comfyui_helper.cli.gif_maker_gui import main as gif_main
         gif_main()
     finally:
         sys.argv = old_argv
