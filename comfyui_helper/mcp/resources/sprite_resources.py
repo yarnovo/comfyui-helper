@@ -8,129 +8,83 @@ from mcp.types import TextContent
 def register_sprite_resources(mcp):
     """注册精灵图相关的 MCP 资源"""
     
-    @mcp.resource("sprite://project-structure")
-    def get_sprite_project_structure() -> str:
-        """获取精灵图项目的标准目录结构说明"""
-        return """# 精灵图项目结构
+    @mcp.resource("sprite://input-structure")
+    def get_sprite_input_structure() -> str:
+        """获取精灵图输入文件的标准目录结构说明"""
+        return """# 精灵图输入文件结构
 
-## 标准项目结构
+## 标准输入目录结构
 ```
-project_name/
-├── config.json          # 项目配置文件（必需）
-├── input_frames/        # 输入帧目录（必需）
-│   ├── frame_001.png
-│   ├── frame_002.png
+input_folder/
+├── idle/               # 待机动作序列
+│   ├── frame_0000.png
+│   ├── frame_0001.png
+│   ├── frame_0002.png
 │   └── ...
-└── output/             # 输出目录（自动创建）
-    ├── spritesheet.png     # 生成的精灵表
-    ├── spritesheet_preview.png # 预览图（可选）
-    └── spritesheet_config.json # 输出配置
+├── walk/               # 行走动作序列
+│   ├── frame_0000.png
+│   ├── frame_0001.png
+│   ├── frame_0002.png
+│   └── ...
+├── run/                # 跑步动作序列
+│   ├── frame_0000.png
+│   ├── frame_0001.png
+│   └── ...
+└── attack/             # 攻击动作序列
+    ├── frame_0000.png
+    ├── frame_0001.png
+    └── ...
 ```
 
 ## 目录说明
 
-### config.json
-项目配置文件，定义精灵表的生成参数。
+### 动作文件夹
+- 每个子文件夹代表一个动作序列
+- 文件夹名称即为动作名称（如 idle, walk, run, attack 等）
+- 支持任意数量的动作文件夹
 
-### input_frames/
-存放所有要合并的精灵帧图片。支持 PNG、JPG、JPEG 格式。
-- 建议使用连续编号命名（如 frame_001.png）
-- 所有帧应具有相同尺寸
+### 帧文件命名
+- 使用统一格式：`frame_0000.png`, `frame_0001.png`, ...
+- 序号必须连续，从 0000 开始
+- 支持 PNG、JPG、JPEG 格式
+- 同一动作内的所有帧应具有相同尺寸
 
-### output/
-自动创建的输出目录，包含：
-- 生成的精灵表图片
-- 可选的预览图（带网格线）
-- 配置信息文件
+## 输出结构
+```
+output_folder/
+├── spritesheet.png    # 合成的精灵表图片
+└── spritesheet.json   # 精灵表配置信息
+```
 
-## 使用方法
-1. 创建项目目录
-2. 添加 config.json 配置文件
-3. 将精灵帧放入 input_frames 目录
-4. 运行 compose_sprite_sheet 工具"""
+## 配置文件内容
+生成的 spritesheet.json 包含：
+- frame_width/frame_height: 每帧的尺寸
+- cols/rows: 精灵表的列数和行数
+- animations: 每个动作的信息
+  - row: 所在行号（从0开始）
+  - frames: 帧数量
 
-    @mcp.resource("sprite://config-template")
-    def get_sprite_config_template() -> str:
-        """获取精灵图配置文件模板"""
-        return """{
-    "name": "my_sprite_sheet",
-    "frame_width": 64,
-    "frame_height": 64,
-    "columns": 8,
-    "rows": null,
-    "padding": 0,
-    "background_color": [0, 0, 0, 0],
-    "input_frames": "./input_frames",
-    "optimize_size": true,
-    "animation": {
-        "fps": 12,
-        "loop": true,
-        "sequences": {
-            "idle": [0, 1, 2, 3],
-            "walk": [4, 5, 6, 7],
-            "run": [8, 9, 10, 11],
-            "jump": [12, 13, 14, 15]
-        }
+## 配置文件示例
+```json
+{
+  "frame_width": 64,
+  "frame_height": 96,
+  "cols": 8,
+  "rows": 2,
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 8
     },
-    "metadata": {
-        "author": "Your Name",
-        "version": "1.0.0",
-        "description": "精灵表描述"
+    "walk": {
+      "row": 1,
+      "frames": 8
     }
-}"""
-
-    @mcp.resource("sprite://example-project")
-    def get_sprite_example_project() -> str:
-        """获取精灵图项目示例"""
-        return """# 精灵图项目示例
-
-## 1. 角色动画精灵表
-```json
-{
-    "name": "character_animations",
-    "frame_width": 128,
-    "frame_height": 128,
-    "columns": 8,
-    "padding": 2,
-    "background_color": [0, 0, 0, 0],
-    "animation": {
-        "fps": 15,
-        "sequences": {
-            "idle": [0, 1, 2, 3],
-            "walk": [4, 5, 6, 7, 8, 9, 10, 11],
-            "attack": [12, 13, 14, 15, 16, 17]
-        }
-    }
+  }
 }
 ```
 
-## 2. UI图标精灵表
-```json
-{
-    "name": "ui_icons",
-    "frame_width": 32,
-    "frame_height": 32,
-    "columns": 16,
-    "padding": 1,
-    "background_color": [255, 255, 255, 0]
-}
-```
-
-## 3. 粒子效果精灵表
-```json
-{
-    "name": "particle_effects",
-    "frame_width": 64,
-    "frame_height": 64,
-    "columns": 8,
-    "optimize_size": true,
-    "animation": {
-        "fps": 30,
-        "loop": false,
-        "sequences": {
-            "explosion": [0, 1, 2, 3, 4, 5, 6, 7],
-            "smoke": [8, 9, 10, 11, 12, 13, 14, 15]
-        }
-    }
-}
-```"""
+游戏引擎可以根据行号和帧数轻松计算：
+- 起始坐标: x = 0, y = row * frame_height
+- 每帧坐标: x = frame_index * frame_width, y = row * frame_height
+- 动画播放: 从第0帧播放到第frames-1帧"""

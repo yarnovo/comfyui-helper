@@ -4,7 +4,7 @@
 import os
 import json
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from typing import Dict, List
 import logging
 
@@ -119,15 +119,13 @@ class SpriteSheetComposer:
         
         return found_frames
     
-    def create_sprite_sheet(self, input_dir: str, output_path: str, 
-                           generate_preview: bool = False) -> Dict:
+    def create_sprite_sheet(self, input_dir: str, output_path: str) -> Dict:
         """
         创建精灵表
         
         Args:
             input_dir: 输入图片目录
             output_path: 输出精灵表路径
-            generate_preview: 是否生成预览图
             
         Returns:
             Dict: 包含结果信息的字典
@@ -136,7 +134,6 @@ class SpriteSheetComposer:
             "success": False,
             "message": "",
             "output_path": "",
-            "preview_path": "",
             "config_path": "",
             "processed_frames": 0,
             "missing_frames": 0,
@@ -200,11 +197,6 @@ class SpriteSheetComposer:
             sprite_sheet.save(str(output_path), 'PNG')
             result["output_path"] = str(output_path)
             
-            if generate_preview:
-                preview_path = output_path.with_suffix('.preview.png')
-                self.generate_preview(sprite_sheet, str(preview_path))
-                result["preview_path"] = str(preview_path)
-            
             config_path = output_path.with_suffix('.json')
             self.generate_sprite_config(str(config_path), str(output_path))
             result["config_path"] = str(config_path)
@@ -225,30 +217,6 @@ class SpriteSheetComposer:
             result["message"] = f"创建精灵表失败: {e}"
             return result
     
-    def generate_preview(self, sprite_sheet: Image.Image, preview_path: str):
-        """生成带网格线的预览图"""
-        preview = sprite_sheet.copy()
-        draw = ImageDraw.Draw(preview)
-        
-        for col in range(self.cols + 1):
-            x = col * self.frame_width
-            draw.line([(x, 0), (x, preview.height)], fill=(255, 255, 255, 128), width=1)
-        
-        for row in range(self.rows + 1):
-            y = row * self.frame_height
-            draw.line([(0, y), (preview.width, y)], fill=(255, 255, 255, 128), width=1)
-        
-        try:
-            font = ImageFont.load_default()
-            for anim_name, anim_config in self.animations.items():
-                row = anim_config['row']
-                y = row * self.frame_height + 2
-                draw.text((2, y), anim_name, fill=(255, 255, 0, 255), font=font)
-        except:
-            pass
-        
-        preview.save(preview_path, 'PNG')
-    
     def generate_sprite_config(self, config_path: str, sprite_path: str):
         """生成精灵表配置文件，描述生成的图片信息"""
         sprite_config = {
@@ -259,9 +227,10 @@ class SpriteSheetComposer:
             "animations": {}
         }
         
+        # 简化的动画配置格式：只记录行号和帧数（行号从1开始）
         for anim_name, anim_config in self.animations.items():
             sprite_config["animations"][anim_name] = {
-                "row": anim_config["row"],
+                "row": anim_config["row"] + 1,  # 行号从1开始
                 "frames": anim_config["frames"]
             }
         
