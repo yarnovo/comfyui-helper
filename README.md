@@ -1,6 +1,6 @@
 # ComfyUI Helper
 
-一个提供游戏开发和 AI 图像处理辅助功能的 MCP (Model Context Protocol) 服务器项目。
+一个集成了 AI 图像处理、游戏开发工具和 MCP (Model Context Protocol) 服务的多功能助手工具。支持背景移除、图像缩放、精灵图合成和 GIF 制作等功能。
 
 ## 快速开始
 
@@ -11,19 +11,29 @@
 
 ### 安装
 
+#### 开发模式安装（推荐）
+
 ```bash
 # 克隆项目
-git clone <repository-url>
+git clone https://github.com/your-username/comfyui-helper.git
 cd comfyui-helper
 
 # 安装依赖
 uv sync
 
-# 安装包为可编辑模式
+# 安装包为可编辑模式（开发用）
 uv pip install -e .
 ```
 
-**注意**：`-e` 参数表示可编辑安装，这样修改源代码后无需重新安装即可生效。
+#### 全局工具安装
+
+```bash
+# 全局安装 CLI 工具
+uv tool install comfyui-helper
+
+# 或从本地安装
+uv tool install /path/to/comfyui-helper
+```
 
 ### 在 Claude Desktop 中使用
 
@@ -54,67 +64,131 @@ uv pip install -e .
 
 3. 重启 Claude Desktop 即可使用
 
-## 可用功能
+## 功能特性
 
-### 🎮 工具：精灵图拼接
+### 🎨 图像处理工具
 
-将单个精灵帧图片拼接成游戏引擎可用的精灵表格式。
+#### 背景移除
+- 使用先进的 RMBG-2.0 模型
+- 支持单张和批量处理
+- 可选择透明或白色背景
+- Alpha 通道阈值调节
 
-**使用示例：**
+#### 图像缩放
+- 支持多种重采样算法（nearest/bilinear/bicubic/lanczos）
+- 保持宽高比缩放
+- 自定义目标尺寸
+- JPEG 质量控制
+
+### 🎮 游戏开发工具
+
+#### 精灵图合成
+- 自动拼接动画帧序列
+- 生成标准精灵表格式
+- 自动创建动画配置文件
+- 支持多个动作序列
+
+### 🎬 GIF 制作器
+- Web GUI 界面
+- 视频转 GIF
+- 自定义帧率和尺寸
+- 实时预览
+
+### 📡 MCP 服务集成
+
+在 Claude Desktop 中可直接调用以下工具：
+- `compose_sprite_sheet` - 合成精灵图表
+- `scale_image` - 缩放图像
+- `remove_background` - 移除背景
+- `batch_remove_background` - 批量移除背景
+
+## 命令行使用
+
+### CLI 工具
+
+```bash
+# 启动 GIF 制作器 Web GUI
+cfh gif-maker
+
+# 查看帮助
+cfh --help
 ```
-compose_sprite_sheet(
-  project_dir="/path/to/sprite_project",
-  generate_preview=true
-)
+
+### Python API
+
+```python
+from comfyui_helper.core import BackgroundRemover, ImageScaler, SpriteComposer
+
+# 移除背景
+remover = BackgroundRemover()
+result = await remover.process_image("input.jpg", "output.png")
+
+# 缩放图像
+scaler = ImageScaler()
+scaler.scale_image("input.jpg", scale_factor=2.0)
+
+# 合成精灵图
+composer = SpriteComposer()
+composer.create_sprite_sheet("sprites_dir", "output_dir")
 ```
-
-### 📚 资源：使用指南
-
-MCP 服务器提供以下资源，可在 Claude 中直接查看：
-
-- **sprite://project-structure** - 精灵图项目的标准目录结构说明
-- **sprite://config-template** - config.json 配置文件模板和详细说明
-- **sprite://example-project** - 创建示例项目的完整步骤
-
-在 Claude 中输入资源 URI 即可查看详细内容。
 
 ## 项目结构
 
 ```
 comfyui-helper/
-├── .mcp.json              # MCP 本地配置
+├── comfyui_helper/
+│   ├── cli/               # 命令行工具
+│   │   ├── main.py        # CLI 入口
+│   │   └── gif_maker_gui.py
+│   ├── core/              # 核心功能模块
+│   │   ├── background_remover.py
+│   │   ├── image_scaler.py
+│   │   ├── sprite_composer.py
+│   │   ├── gif_maker.py
+│   │   └── video_frame_extractor.py
+│   └── mcp/               # MCP 服务
+│       ├── tools/         # MCP 工具定义
+│       └── resources/     # MCP 资源
+├── examples/              # 示例项目
+├── docs/                  # 文档
 ├── pyproject.toml         # 项目配置
-├── README.md              # 本文档
-└── src/
-    └── comfyui_helper/
-        ├── README.md      # 工具详细文档
-        ├── __init__.py    
-        ├── __main__.py    # 入口点
-        ├── server.py      # MCP 服务器
-        └── sprite_composer.py  # 精灵图处理模块
+└── README.md              # 本文档
 ```
 
 ## 开发指南
 
-### 运行测试
+### 运行和测试
 
 ```bash
-# 直接运行 MCP 服务器
+# 运行 MCP 服务器
 uv run python -m comfyui_helper
+
+# 运行 CLI 工具
+uv run cfh gif-maker
+
+# 开发模式调试
+uv run python -m comfyui_helper.cli.gif_maker_gui
 ```
 
-### 开发时的注意事项
+### 添加新功能
 
-- **源代码修改**：由于使用了可编辑安装（`-e`），修改代码后直接重启服务即可，无需重新安装
-- **添加新依赖**：修改 `pyproject.toml` 后需要运行 `uv sync` 和 `uv pip install -e .`
-- **包结构变更**：如果改变了包结构（添加新模块等），需要重新运行 `uv pip install -e .`
+1. **核心功能**：在 `comfyui_helper/core/` 下创建模块
+2. **MCP 工具**：在 `comfyui_helper/mcp/tools/` 下添加并注册
+3. **CLI 命令**：在 `comfyui_helper/cli/main.py` 中添加子命令
+4. 更新测试和文档
 
-### 添加新工具
+### 依赖管理
 
-1. 在 `src/comfyui_helper/` 下创建新的模块
-2. 在 `server.py` 的 `list_tools()` 中注册工具
-3. 在 `call_tool()` 中实现工具逻辑
-4. 更新相关文档
+```bash
+# 添加新依赖
+uv add package-name
+
+# 同步依赖
+uv sync
+
+# 重新安装（开发模式）
+uv pip install -e .
+```
 
 ## 故障排查
 
