@@ -50,6 +50,8 @@ class GifMakerGUI:
         self.current_gif_data = None  # 存储当前生成的 GIF 数据
         self.current_gif_config = None  # 存储当前 GIF 配置
         self.temp_frames = []  # 保存临时帧文件路径
+        self.extraction_fps = None  # 保存视频提取时的 FPS
+        self.video_info = None  # 保存视频信息
     
     
     def get_video_info_preview(self, video_file) -> str:
@@ -103,6 +105,10 @@ FPS: {video_info['fps']:.1f}
             # 检查是否成功
             if not result.get("success", False):
                 return None, f"❌ 视频处理失败: {result.get('message', '未知错误')}", []
+            
+            # 保存提取 FPS 和视频信息
+            self.extraction_fps = fps
+            self.video_info = result.get('video_info', {})
             
             progress(0.6, desc="正在加载帧图片...")
             
@@ -237,7 +243,7 @@ FPS: {video_info['fps']:.1f}
             return None, f"❌ 错误：{str(e)}"
     
     def export_frames(self, output_dir: str = None, remove_bg: bool = True, progress=gr.Progress()) -> str:
-        """导出 GIF 的帧图片到指定目录"""
+        """导出 GIF 的帧图片到指定目录，并生成配置 JSON 文件"""
         if not self.current_gif_config or 'selected_files' not in self.current_gif_config:
             return "❌ 没有可导出的帧，请先生成 GIF 预览"
         
@@ -273,6 +279,7 @@ FPS: {video_info['fps']:.1f}
             # 处理并导出帧图片
             exported_count = 0
             total_files = len(selected_files)
+            exported_frames = []  # 记录导出的文件名
             
             for i, src_path in enumerate(selected_files):
                 src = Path(src_path)
@@ -286,6 +293,7 @@ FPS: {video_info['fps']:.1f}
                     # 生成新的文件名（保持顺序）
                     dst_name = f"frame_{i:04d}.png"  # 始终使用PNG格式（支持透明背景）
                     dst = frames_dir / dst_name
+                    exported_frames.append(dst_name)
                     
                     if remove_bg:
                         # 去除背景
@@ -308,6 +316,40 @@ FPS: {video_info['fps']:.1f}
                         shutil.copy2(src, dst)
                         exported_count += 1
             
+            # 创建简化的配置 JSON 文件
+            # 从原始文件名中提取帧编号
+            start_frame_index = None
+            end_frame_index = None
+            
+            if selected_files:
+                # 从第一个文件名中提取帧编号 (如 frame_000001.png -> 1)
+                start_name = Path(selected_files[0]).name
+                if start_name.startswith("frame_"):
+                    try:
+                        start_frame_index = int(start_name.split('_')[1].split('.')[0])
+                    except:
+                        start_frame_index = 1
+                
+                # 从最后一个文件名中提取帧编号
+                end_name = Path(selected_files[-1]).name
+                if end_name.startswith("frame_"):
+                    try:
+                        end_frame_index = int(end_name.split('_')[1].split('.')[0])
+                    except:
+                        end_frame_index = exported_count
+            
+            config_data = {
+                "start_frame_index": start_frame_index,  # 原始视频中的起始帧号
+                "end_frame_index": end_frame_index,      # 原始视频中的结束帧号
+                "frame_count": exported_count,           # 导出的总帧数
+                "extraction_fps": self.extraction_fps if self.extraction_fps else 10
+            }
+            
+            # 保存配置文件
+            config_file = frames_dir / "animation_config.json"
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(config_data, f, indent=2, ensure_ascii=False)
+            
             progress(1.0, desc="完成！")
             
             result_msg = f"""✅ 帧图片导出成功！
@@ -315,8 +357,11 @@ FPS: {video_info['fps']:.1f}
 导出目录：{frames_dir}
 帧数量：{exported_count}
 背景处理：{'已去除背景（透明PNG）' if remove_bg else '保留原始背景'}
+配置文件：animation_config.json
+开始帧：{exported_frames[0] if exported_frames else 'N/A'}
+结束帧：{exported_frames[-1] if exported_frames else 'N/A'}
 
-提示：你可以使用这些帧图片在其他软件中制作动画"""
+提示：配置文件包含了动画的所有设置信息"""
             
             return result_msg
             
@@ -646,7 +691,9 @@ FPS: {video_info['fps']:.1f}
                                     "height": result["dimensions"][1]
                                 },
                                 "file_size_bytes": result["file_size"],
-                                "selected_files": selected_files  # 保存选中的文件列表
+                                "selected_files": selected_files,  # 保存选中的文件列表
+                                "start_image": Path(selected_files[0]).name if selected_files else None,
+                                "end_image": Path(selected_files[-1]).name if selected_files else None
                             }
                             
                             # 读取 GIF 数据到内存

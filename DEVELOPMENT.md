@@ -206,7 +206,7 @@ uv tool install /path/to/comfyui-helper
 
 # 更新已安装的工具（推荐方式：先卸载再安装）
 uv tool uninstall comfyui-helper
-uv tool install /path/to/comfyui-helper
+uv tool install .
 
 # 或者在开发模式下安装（仅虚拟环境）
 uv pip install -e .
