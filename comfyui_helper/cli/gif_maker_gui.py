@@ -318,29 +318,29 @@ FPS: {video_info['fps']:.1f}
             
             # 创建简化的配置 JSON 文件
             # 从原始文件名中提取帧编号
-            start_frame_index = None
-            end_frame_index = None
+            start_frame_num = None
+            end_frame_num = None
             
             if selected_files:
                 # 从第一个文件名中提取帧编号 (如 frame_000001.png -> 1)
                 start_name = Path(selected_files[0]).name
                 if start_name.startswith("frame_"):
                     try:
-                        start_frame_index = int(start_name.split('_')[1].split('.')[0])
+                        start_frame_num = int(start_name.split('_')[1].split('.')[0])
                     except:
-                        start_frame_index = 1
+                        start_frame_num = 1
                 
                 # 从最后一个文件名中提取帧编号
                 end_name = Path(selected_files[-1]).name
                 if end_name.startswith("frame_"):
                     try:
-                        end_frame_index = int(end_name.split('_')[1].split('.')[0])
+                        end_frame_num = int(end_name.split('_')[1].split('.')[0])
                     except:
-                        end_frame_index = exported_count
+                        end_frame_num = exported_count
             
             config_data = {
-                "start_frame_index": start_frame_index,  # 原始视频中的起始帧号
-                "end_frame_index": end_frame_index,      # 原始视频中的结束帧号
+                "start_frame_num": start_frame_num,      # 原始视频中的起始帧号（从1开始）
+                "end_frame_num": end_frame_num,          # 原始视频中的结束帧号
                 "frame_count": exported_count,           # 导出的总帧数
                 "extraction_fps": self.extraction_fps if self.extraction_fps else 10
             }
